@@ -25,6 +25,8 @@ jobs:
       - run: npm run registry:verify
       - run: npm run tools:check
       - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:web
       - name: Static source smoke test
         run: |
           npm run preview > /tmp/market-preview.log 2>&1 &

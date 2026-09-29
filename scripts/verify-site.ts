@@ -9,6 +9,15 @@ const trust = JSON.parse(await readFile('registry/trust.json', 'utf8')) as { pub
 const local = verifyCatalog(JSON.parse(await readFile('registry/catalog.json', 'utf8')), trust.publicKey);
 
 async function verifyDeployment() {
+  const home = await fetch(base, { signal: AbortSignal.timeout(15000), cache: 'no-cache', redirect: 'error' });
+  if (!home.ok || !home.headers.get('content-type')?.includes('text/html')) throw new Error(`Homepage HTTP ${home.status}`);
+  const homepage = await home.text();
+  if (!homepage.includes('data-market-home') || !homepage.includes('XTools 工具市场')) throw new Error('Market homepage missing');
+  for (const asset of ['market.css', 'market.js', 'favicon.png']) {
+    const response = await fetch(new URL(asset, base), { signal: AbortSignal.timeout(15000), cache: 'no-cache', redirect: 'error' });
+    if (!response.ok) throw new Error(`Homepage asset missing: ${asset}`);
+    if (digest(new Uint8Array(await response.arrayBuffer())) !== digest(await readFile(`web/${asset}`))) throw new Error(`Stale homepage asset: ${asset}`);
+  }
   const response = await fetch(new URL('catalog.json', base), { signal: AbortSignal.timeout(15000), cache: 'no-cache', redirect: 'error' });
   if (!response.ok) throw new Error(`Catalog HTTP ${response.status}`);
   if (base.protocol === 'https:' && response.headers.get('access-control-allow-origin') !== '*') {

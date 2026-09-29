@@ -24,6 +24,8 @@ jobs:
       - run: npm run registry:verify
       - run: npm run tools:check
       - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:web
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

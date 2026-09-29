@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "npm run build && npm run preview",
     "preview": "vite preview --outDir _site --host 127.0.0.1 --port 1430 --strictPort",
@@ -11,6 +13,7 @@
     "check": "tsc --noEmit && tsc -p tools/tsconfig.json",
     "tools:check": "tsx scripts/check-tools.ts",
     "test": "tsx --test tests/*.test.ts",
+    "test:web": "playwright test",
     "keys:init": "tsx scripts/init-keys.ts",
     "tools:release": "tsx scripts/release-tools.ts",
     "registry:verify": "tsx scripts/verify-registry.ts",
@@ -22,9 +25,11 @@
   },
   "devDependencies": {
     "@noble/hashes": "^2.4.0",
+    "@playwright/test": "^1.63.0",
     "@types/node": "^24.0.0",
     "@types/semver": "^7.7.0",
     "diff": "^8.0.2",
+    "lucide-static": "^1.48.0",
     "tsx": "^4.20.0",
     "typescript": "^5.9.3",
     "uuid": "^14.0.2",

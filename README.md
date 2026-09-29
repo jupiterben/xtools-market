@@ -15,6 +15,8 @@ npm test
 npm run registry:verify
 npm run tools:check
 npm run build
+npx playwright install chromium
+npm run test:web
 npm run preview
 ```
 
@@ -24,13 +26,17 @@ npm run preview
 
 | 路径 | 用途 |
 | --- | --- |
+| `index.html` | Grid Card 首页：搜索、分类、工具详情、包下载、复制市场源 |
+| `market.css` / `market.js` / `favicon.png` | 自托管首页资源，不依赖外部 CDN |
 | `catalog.json` | Ed25519 签名目录，包含元数据和已发布版本 |
 | `packages/<sha256>.xtool` | HTML 工具包的原始字节，以数据扩展名下载 |
 | `health.json` | 静态产物状态与工具数量 |
 
 `registry/catalog.json` 的 `payload` 是待验签的原始 UTF-8 JSON 字符串，`signature` 是 Ed25519 签名（hex）。公钥见 `registry/trust.json`，客户端必须事先固定公钥，不能从同一个不可信请求临时采信公钥。目录包含工具信息、API 版本、包长度和 SHA-256。
 
-发布器先验证签名和所有包，再按白名单导出目录、包和健康文件。`.xtool` 只是分发扩展名，字节与签名摘要不变；不会在 Pages 域名下作为 HTML 页面执行。发布产物不包含 `.keys`、工具源码、node_modules 或 Git 数据。GitHub Pages 的站点子路径必须保留，拼接时用 `catalog.json` 而不是 `/catalog.json`。
+发布器先验证签名和所有包，再按白名单导出首页及其资源、目录、包和健康文件。首页由已验证的最新版本信息在构建时生成，禁用 JavaScript 时仍能查看和下载工具；搜索、分类、详情弹窗和复制在浏览器本地完成。下载只保存 `.xtool` 文件，不代表已安装到客户端。客户端内的市场安装仍走原有签名校验流程。
+
+`.xtool` 只是分发扩展名，字节与签名摘要不变；不会在 Pages 域名下作为 HTML 页面执行。发布产物不包含 `.keys`、工具源码、node_modules 或 Git 数据。GitHub Pages 的站点子路径必须保留，拼接时用 `catalog.json` 而不是 `/catalog.json`。
 
 ## 工具发布
 
@@ -52,7 +58,8 @@ npm run registry:verify
 ## GitHub CI/CD
 
 - `CI`：PR / main 上运行类型检查、签名与完整性测试、源代码与已签名包一致性检查、静态构建及本地 HTTP 下载验证。
-- `Deploy Market Pages`：main 验证通过后上传 `_site`，通过官方 Pages Actions 原子部署，再读取公网文件校验目录版本、CORS 和全部包摘要。
+- `Deploy Market Pages`：main 验证通过后上传 `_site`，通过官方 Pages Actions 原子部署，再检查根首页 HTTP 200、页面资源、目录版本、CORS 和全部包摘要。
+- 浏览器测试覆盖搜索分类、详情弹窗、下载摘要、剪贴板失败反馈、无 JavaScript 访问、深浅主题和桌面/手机布局。
 - 只有 deploy job 获得 `pages:write` 和 `id-token:write`，PR 没有发布权限。不需要 PAT、SSH 密码或 CI 签名私钥。
 - Pages Source 必须为 **GitHub Actions**（仓库 Settings → Pages）。当前仓库已启用工作流部署。
 - 手动运行工作流也只允许 main 发布，避免旧分支覆盖市场。

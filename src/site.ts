@@ -2,6 +2,7 @@ import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { loadRegistry } from './registry.js';
+import { renderHomepage } from './homepage.js';
 
 export async function buildSite(registryDir = 'registry', outputDir = '_site') {
   const source = resolve(registryDir);
@@ -15,6 +16,10 @@ export async function buildSite(registryDir = 'registry', outputDir = '_site') {
   try {
     await mkdir(join(staging, 'packages'), { recursive: true });
     await writeFile(join(staging, 'catalog.json'), await readFile(join(source, 'catalog.json')));
+    await writeFile(join(staging, 'index.html'), await renderHomepage(registry));
+    for (const asset of ['market.css', 'market.js', 'favicon.png']) {
+      await writeFile(join(staging, asset), await readFile(resolve('web', asset)));
+    }
     for (const [sha, bytes] of registry.packages) {
       // A data extension prevents a normal browser visit from executing tools in the Pages origin.
       await writeFile(join(staging, 'packages', `${sha}.xtool`), bytes);

@@ -5,6 +5,8 @@ _site/
 .keys/
 .logs/
 coverage/
+test-results/
+playwright-report/
 .env
 .env.local
 *.pem

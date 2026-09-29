@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { digest, loadRegistry, verifyCatalog } from '../src/registry.js';
 import { buildSite } from '../src/site.js';
+import { escapeHtml, renderHomepage } from '../src/homepage.js';
 
 test('registry signature and all package bytes verify', async () => {
   const registry = await loadRegistry('registry');
@@ -34,7 +35,7 @@ test('static site is an allowlisted byte-exact export, without stale or private 
     const registry = await buildSite();
     await writeFile('_site/stale-private-file.pem', 'test-only fixture');
     await buildSite();
-    assert.deepEqual((await readdir('_site')).sort(), ['.nojekyll', 'catalog.json', 'health.json', 'packages']);
+    assert.deepEqual((await readdir('_site')).sort(), ['.nojekyll', 'catalog.json', 'favicon.png', 'health.json', 'index.html', 'market.css', 'market.js', 'packages']);
     assert.deepEqual(await readFile('_site/catalog.json'), await readFile('registry/catalog.json'));
     const files = await readdir('_site/packages');
     assert.equal(files.length, registry.packages.size);
@@ -48,4 +49,19 @@ test('static site is an allowlisted byte-exact export, without stale or private 
     await assert.rejects(buildSite(directory));
     assert.deepEqual(await readFile('_site/catalog.json'), before);
   } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+test('homepage renders verified tools and safe relative download links without script injection', async () => {
+  const registry = await loadRegistry('registry');
+  const html = await renderHomepage(registry);
+  assert.match(html, /data-market-home/);
+  assert.equal((html.match(/class="tool-card"/g) ?? []).length, registry.latest.size);
+  for (const release of registry.latest.values()) {
+    assert.ok(html.includes(`href="./packages/${release.sha256}.xtool"`));
+  }
+  assert.equal(escapeHtml('<script>"x"&\'</script>'), '&lt;script&gt;&quot;x&quot;&amp;&#39;&lt;/script&gt;');
+  const first = registry.latest.values().next().value!;
+  const malicious = { ...first, manifest: { ...first.manifest, name: '"><script>alert(1)</script>' } };
+  const safe = await renderHomepage({ ...registry, latest: new Map([[first.manifest.id, malicious]]) });
+  assert.ok(!safe.includes('<script>alert(1)</script>'));
 });
