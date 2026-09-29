@@ -1,0 +1,14 @@
+services:
+  market:
+    image: ${MARKET_IMAGE:-ghcr.io/jupiterben/xtools-market:main}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1430:1430"
+    environment:
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://127.0.0.1:1420,http://localhost:1420}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    mem_limit: 256m
+    pids_limit: 100

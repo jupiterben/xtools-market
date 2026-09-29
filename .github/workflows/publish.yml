@@ -1,0 +1,88 @@
+name: Publish Container
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run registry:verify
+      - run: npm run tools:check
+      - run: npm run build
+  publish:
+    needs: validate
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=sha,format=long
+      - name: Build candidate
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: xtools-market:candidate
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Verify container before publishing
+        run: |
+          docker run -d --name market --read-only --cap-drop ALL -p 127.0.0.1:1430:1430 xtools-market:candidate
+          trap 'docker logs market; docker rm -f market' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail http://127.0.0.1:1430/healthz; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Publish
+        id: image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          provenance: true
+          sbom: true
+      - name: Summary
+        env:
+          DIGEST: ${{ steps.image.outputs.digest }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          echo "### Published image" >> "$GITHUB_STEP_SUMMARY"
+          echo "ghcr.io/${REPOSITORY}@${DIGEST}" >> "$GITHUB_STEP_SUMMARY"

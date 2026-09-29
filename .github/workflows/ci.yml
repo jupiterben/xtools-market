@@ -1,0 +1,40 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run registry:verify
+      - run: npm run tools:check
+      - run: npm run build
+      - name: Docker smoke test
+        run: |
+          docker build -t xtools-market:ci .
+          docker run -d --name market --read-only --cap-drop ALL -p 127.0.0.1:1430:1430 xtools-market:ci
+          trap 'docker logs market; docker rm -f market' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail http://127.0.0.1:1430/healthz; then
+              curl --fail http://127.0.0.1:1430/v1/catalog > /dev/null
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
