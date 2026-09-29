@@ -25,14 +25,14 @@ jobs:
       - run: npm run registry:verify
       - run: npm run tools:check
       - run: npm run build
-      - name: Docker smoke test
+      - name: Static source smoke test
         run: |
-          docker build -t xtools-market:ci .
-          docker run -d --name market --read-only --cap-drop ALL -p 127.0.0.1:1430:1430 xtools-market:ci
-          trap 'docker logs market; docker rm -f market' EXIT
+          npm run preview > /tmp/market-preview.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"; cat /tmp/market-preview.log' EXIT
           for attempt in $(seq 1 30); do
-            if curl --fail http://127.0.0.1:1430/healthz; then
-              curl --fail http://127.0.0.1:1430/v1/catalog > /dev/null
+            if curl --fail http://127.0.0.1:1430/health.json; then
+              npm run site:verify -- http://127.0.0.1:1430/
               exit 0
             fi
             sleep 1

@@ -1,6 +1,10 @@
 # XTools Market
 
-独立于 XTools 桌面客户端的官方工具市场服务。Node.js 24 + TypeScript + Fastify，监听 `127.0.0.1:1430`。
+以 GitHub 仓库维护、GitHub Actions 校验、GitHub Pages 托管的静态工具市场。不需要 API 服务器、数据库或 Docker。
+
+正式市场源：**https://jupiterben.github.io/xtools-market/**
+
+客户端读取签名目录，在本地完成搜索、分类与版本比较，再下载并验证工具包。已安装工具继续离线使用。
 
 ## 启动与验证
 
@@ -9,22 +13,24 @@ npm ci
 npm run check
 npm test
 npm run registry:verify
+npm run tools:check
 npm run build
-npm start
+npm run preview
 ```
 
-接口：
+`npm run build` 生成 `_site/`，`npm run preview` 仅用于本地预览，监听 `127.0.0.1:1430`。生产不运行 Node 服务。
+
+静态文件：
 
 | 路径 | 用途 |
 | --- | --- |
-| `GET /healthz` | 健康检查 |
-| `GET /v1/catalog` | Ed25519 签名目录，支持 ETag / 304 |
-| `GET /v1/tools?q=json&category=数据处理&page=1&pageSize=24` | 搜索、分类、分页 |
-| `GET /v1/tools/:id` | 最新版本详情 |
-| `GET /v1/tools/:id/versions` | 所有已发布版本 |
-| `GET /v1/packages/:sha256` | 不可变 HTML 工具包下载 |
+| `catalog.json` | Ed25519 签名目录，包含元数据和已发布版本 |
+| `packages/<sha256>.xtool` | HTML 工具包的原始字节，以数据扩展名下载 |
+| `health.json` | 静态产物状态与工具数量 |
 
 `registry/catalog.json` 的 `payload` 是待验签的原始 UTF-8 JSON 字符串，`signature` 是 Ed25519 签名（hex）。公钥见 `registry/trust.json`，客户端必须事先固定公钥，不能从同一个不可信请求临时采信公钥。目录包含工具信息、API 版本、包长度和 SHA-256。
+
+发布器先验证签名和所有包，再按白名单导出目录、包和健康文件。`.xtool` 只是分发扩展名，字节与签名摘要不变；不会在 Pages 域名下作为 HTML 页面执行。发布产物不包含 `.keys`、工具源码、node_modules 或 Git 数据。GitHub Pages 的站点子路径必须保留，拼接时用 `catalog.json` 而不是 `/catalog.json`。
 
 ## 工具发布
 
@@ -39,38 +45,29 @@ npm run tools:release
 npm run registry:verify
 ```
 
-提交源码和签名后的 registry 产物，通过 PR 审核后合并 main。新机器需要原私钥才能发布新工具；私钥不在 Git、Docker、Actions 日志或镜像中。请安全备份，丢失需做客户端信任迁移。CI 只有公钥，可验证产物而不能伪造新工具包。
+提交源码和签名后的 registry 产物，通过 PR 审核后合并 main。新机器需要原私钥才能发布新工具；私钥不在 Git、Actions 日志或 Pages 产物中。请安全备份，丢失需做客户端信任迁移。CI 只有公钥，可验证产物而不能伪造新工具包。
 
 当前 8 款工具有独立版本和绑定 ID 的包，但复用同一套工具 UI/转换源码。更细粒度的按需拆分依赖、第三方上传审核、用户评分、撤销列表和客户端自动更新不在这一版范围内。签名证明发布来源，不证明代码无漏洞；发布前必须审查工具代码。
 
 ## GitHub CI/CD
 
-- `CI`：PR / main 上运行类型检查、API 测试、签名与包完整性校验、TypeScript 构建和 Docker 健康检查。
-- `Publish Container`：main / `v*` tag 验证通过后发布 GHCR 镜像，带 commit SHA、SBOM 和构建来源信息。使用 GitHub 自带 `GITHUB_TOKEN`，不需要长期 Docker 密码。
-- `main` 对应 `ghcr.io/jupiterben/xtools-market:main`，版本 tag 对应版本镜像。部署建议使用运行摘要中给出的不可变 digest。
-- PR 不获得发布权限；Dependabot 每周检查 npm、Actions 和基础镜像。
-- 首次运行需确保仓库允许 GitHub Actions、GITHUB_TOKEN 有 package 写权限。GHCR 包默认可能是私有，服务器需要只读登录或手动把该包设为公开。
+- `CI`：PR / main 上运行类型检查、签名与完整性测试、源代码与已签名包一致性检查、静态构建及本地 HTTP 下载验证。
+- `Deploy Market Pages`：main 验证通过后上传 `_site`，通过官方 Pages Actions 原子部署，再读取公网文件校验目录版本、CORS 和全部包摘要。
+- 只有 deploy job 获得 `pages:write` 和 `id-token:write`，PR 没有发布权限。不需要 PAT、SSH 密码或 CI 签名私钥。
+- Pages Source 必须为 **GitHub Actions**（仓库 Settings → Pages）。当前仓库已启用工作流部署。
+- 手动运行工作流也只允许 main 发布，避免旧分支覆盖市场。
+- Dependabot 检查 npm 和 GitHub Actions。依赖改变若导致已发布工具包字节变化，CI 会拒绝，需要提升工具版本并重新签名。
 
-CD 当前交付经过健康检查的容器镜像，不会自动登录未知服务器。服务器/域名尚未指定，需在目标 Linux 主机执行：
+正式发布验证也可手动执行：
 
-```sh
-export MARKET_IMAGE=ghcr.io/jupiterben/xtools-market@sha256:REPLACE_WITH_PUBLISHED_DIGEST
-docker compose pull
-docker compose up -d --wait
-curl --fail http://127.0.0.1:1430/healthz
+```powershell
+npm run site:verify -- https://jupiterben.github.io/xtools-market/
 ```
 
-通过 Caddy/Nginx 配置 HTTPS 反向代理到回环端口。不要把管理或未加 TLS 的服务直接暴露公网。回滚时将 MARKET_IMAGE 改回上一个 digest 再执行同样命令。
+生产不再使用 `/v1/*` API，旧 Docker 发布工作流已移除，之前的 GHCR 镜像保留但不再更新。客户端需升级到静态源协议。仓库本身是唯一维护入口，不频繁调用 GitHub API，因此浏览工具无需 GitHub 登录或 token。
 
-## 配置与运维
+## 回滚与边界
 
-| 环境变量 | 默认值 |
-| --- | --- |
-| `HOST` | `127.0.0.1`（镜像中为 `0.0.0.0`） |
-| `PORT` | `1430` |
-| `REGISTRY_DIR` | `registry` |
-| `CORS_ORIGINS` | `http://127.0.0.1:1420,http://localhost:1420` |
+回滚市场内容时，在 main 恢复可信的目录并发布；保留仍被缓存目录引用的历史包，避免缓存中的下载引用失效。不要直接删除已发布版本。签名验证不等于防回放，密钥轮换、目录过期和撤销策略仍待后续实现。
 
-服务启动时验证并载入目录和所有工具包，损坏时拒绝启动。运行时只读、不需要数据库或写磁盘；发布随镜像部署并可按 digest 回滚。此方案适用于体积小的官方工具目录，后续大量工具可迁移对象存储/CDN，API 协议不需要改变。
-
-反向代理应增加公网限流；当前应用使用真实 TCP 地址限流，不盲目信任伪造 X-Forwarded-For。已安装工具及用户输入不存储在此服务。
+Pages 缓存传播可能有短暂延迟，部署后验证会重试。它适合体积较小的公开官方工具目录，不提供私有账户、评分、计费或任意第三方上传。客户端仍固定公钥且在本地受限容器运行工具，用户输入不上传到 GitHub。
