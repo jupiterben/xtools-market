@@ -47,10 +47,22 @@ for (const button of document.querySelectorAll('[data-detail]')) {
     document.querySelector('#detail-size').textContent = `${(Number(button.dataset.bytes) / 1024).toFixed(1)} KB`;
     document.querySelector('#detail-versions').textContent = button.dataset.versions;
     document.querySelector('#detail-sha').value = button.dataset.sha;
-    const download = document.querySelector('#detail-download');
-    download.href = `./packages/${button.dataset.sha}.xtool`;
-    download.download = `${button.dataset.detail}-${button.dataset.version}.xtool`;
+    const install = document.querySelector('#detail-install');
+    install.href = `xtools://install?id=${encodeURIComponent(button.dataset.detail)}`;
+    install.dataset.name = button.dataset.name;
     dialog.showModal();
   });
 }
 document.querySelector('#close-detail').addEventListener('click', () => dialog.close());
+
+const installPrompt = document.querySelector('#install-prompt');
+for (const link of document.querySelectorAll('[data-install]')) {
+  link.addEventListener('click', () => {
+    document.querySelector('#install-name').textContent = link.dataset.name;
+    document.querySelector('#retry-install').href = link.href;
+    if (dialog.open) dialog.close();
+    if (!installPrompt.open) installPrompt.showModal();
+    // Keep the native link navigation in the user's click gesture.
+  });
+}
+document.querySelector('#close-install').addEventListener('click', () => installPrompt.close());

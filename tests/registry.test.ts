@@ -51,14 +51,16 @@ test('static site is an allowlisted byte-exact export, without stale or private 
   } finally { await rm(directory, { recursive: true, force: true }); }
 });
 
-test('homepage renders verified tools and safe relative download links without script injection', async () => {
+test('homepage renders verified tools and client install links without script injection', async () => {
   const registry = await loadRegistry('registry');
   const html = await renderHomepage(registry);
   assert.match(html, /data-market-home/);
   assert.equal((html.match(/class="tool-card"/g) ?? []).length, registry.latest.size);
   for (const release of registry.latest.values()) {
-    assert.ok(html.includes(`href="./packages/${release.sha256}.xtool"`));
+    assert.ok(html.includes(`href="xtools://install?id=${encodeURIComponent(release.manifest.id)}"`));
   }
+  assert.ok(!html.includes(' download='));
+  assert.ok(!html.includes('href="./packages/'));
   assert.equal(escapeHtml('<script>"x"&\'</script>'), '&lt;script&gt;&quot;x&quot;&amp;&#39;&lt;/script&gt;');
   const first = registry.latest.values().next().value!;
   const malicious = { ...first, manifest: { ...first.manifest, name: '"><script>alert(1)</script>' } };

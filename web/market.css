@@ -60,9 +60,9 @@ select { border: 1px solid var(--border); border-radius: 6px; padding: 0 12px; b
 .tags { display: flex; flex-wrap: wrap; gap: 10px; color: var(--muted); font-size: 11px; min-height: 24px; margin-bottom: 13px; }
 .card-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--border); min-height: 61px; }
 .version { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
-.download { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; padding: 5px 11px; background: var(--accent-soft); color: var(--accent); font-size: 12px; border-radius: 5px; }
-.download .icon svg { width: 15px; height: 15px; }
-.download:hover { background: var(--subtle); }
+.install { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; padding: 5px 11px; background: var(--accent-soft); color: var(--accent); font-size: 12px; border-radius: 5px; }
+.install .icon svg { width: 15px; height: 15px; }
+.install:hover { background: var(--subtle); }
 .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
 .empty-state h2 { font-size: 16px; font-weight: 500; margin: 16px 0; }
 .button { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 9px 16px; font-size: 13px; }
@@ -87,7 +87,10 @@ dt { color: var(--muted); }
 dd { margin: 0; }
 .checksum-label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 6px; }
 #detail-sha { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; background: var(--subtle); font: 11px Consolas, monospace; }
-.dialog-actions { display: flex; justify-content: flex-end; margin-top: 22px; }
+.dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; margin-top: 22px; }
+.dialog-actions .button { display: inline-flex; align-items: center; gap: 4px; }
+#install-message { font-size: 13px; overflow-wrap: anywhere; }
+.install-help { color: var(--muted); font-size: 12px; margin-top: 12px; }
 @media (prefers-color-scheme: dark) {
   :root { color-scheme: dark; --bg: #1c1e20; --surface: #222528; --subtle: #292d30; --text: #e4e7e9; --muted: #a5adb5; --border: #373c40; --accent: #83d5b0; --accent-soft: #283e33; }
 }
@@ -105,6 +108,6 @@ dd { margin: 0; }
   select { max-width: 108px; font-size: 12px; padding-inline: 6px; }
   .icon-button { width: 40px; height: 40px; }
   .description { min-height: auto; }
-  .download { min-height: 40px; }
+  .install { min-height: 40px; }
   .list-heading { font-size: 11px; }
 }

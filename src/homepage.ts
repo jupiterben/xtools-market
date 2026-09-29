@@ -19,8 +19,8 @@ async function icon(name: string): Promise<string> {
 }
 
 export async function renderHomepage(registry: Registry): Promise<string> {
-  const [box, search, download, copy, github, arrow, shield, info, close] = await Promise.all(
-    ['box', 'search', 'download', 'copy', 'git-fork', 'arrow-up-right', 'shield-check', 'info', 'x'].map(icon),
+  const [box, search, install, copy, github, arrow, shield, info, close] = await Promise.all(
+    ['box', 'search', 'app-window', 'copy', 'git-fork', 'arrow-up-right', 'shield-check', 'info', 'x'].map(icon),
   );
   const categories = [...new Set([...registry.latest.values()].map(({ manifest }) => manifest.category))];
   const cards = await Promise.all([...registry.latest.values()].map(async (release) => {
@@ -36,7 +36,7 @@ export async function renderHomepage(registry: Registry): Promise<string> {
       <p class="description">${escapeHtml(tool.description)}</p>
       <div class="tags">${tool.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join('')}</div>
       <div class="card-footer"><span class="version">v${escapeHtml(tool.version)}</span>
-        <a class="download" href="./packages/${release.sha256}.xtool" download="${escapeHtml(tool.id)}-${escapeHtml(tool.version)}.xtool" aria-label="下载${name}">${download}下载</a>
+        <a class="install" data-install data-name="${name}" href="xtools://install?id=${encodeURIComponent(tool.id)}" aria-label="安装${name}">${install}安装</a>
       </div>
     </article>`;
   }));
@@ -46,7 +46,7 @@ export async function renderHomepage(registry: Registry): Promise<string> {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="XTools 官方工具市场，发现和下载本地运行的开发者工具。">
+  <meta name="description" content="XTools 官方工具市场，发现工具并在 XTools 客户端中安装。">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
   <meta name="color-scheme" content="light dark">
   <title>XTools 工具市场</title>
@@ -60,7 +60,7 @@ export async function renderHomepage(registry: Registry): Promise<string> {
     <a class="brand" href="./" aria-label="XTools 工具市场首页"><img src="./favicon.png" alt="" width="30" height="30"><span>XTools</span></a>
     <span class="nav-current">工具市场</span>
     <nav aria-label="项目链接">
-      <a class="client-link" href="https://github.com/jupiterben/xtools">客户端${arrow}</a>
+      <a class="client-link" href="https://github.com/jupiterben/xtools/releases">客户端${arrow}</a>
       <a class="icon-button" href="https://github.com/jupiterben/xtools-market" title="GitHub 仓库" aria-label="GitHub 仓库">${github}</a>
     </nav>
   </div></header>
@@ -85,7 +85,16 @@ export async function renderHomepage(registry: Registry): Promise<string> {
     <p id="detail-description"></p>
     <dl><div><dt>版本</dt><dd id="detail-version"></dd></div><div><dt>包大小</dt><dd id="detail-size"></dd></div><div><dt>已发布版本</dt><dd id="detail-versions"></dd></div><div><dt>系统权限</dt><dd>无需系统权限</dd></div></dl>
     <label class="checksum-label" for="detail-sha">SHA-256</label><input id="detail-sha" readonly spellcheck="false">
-    <div class="dialog-actions"><a id="detail-download" class="download">${download}下载工具包</a></div>
+    <div class="dialog-actions"><a id="detail-install" data-install class="install">${install}安装工具</a></div>
+  </dialog>
+  <dialog id="install-prompt" aria-labelledby="install-title" aria-describedby="install-message">
+    <div class="dialog-heading"><h2 id="install-title">打开 XTools 客户端</h2><button class="icon-button" id="close-install" type="button" title="关闭安装提示" aria-label="关闭安装提示">${close}</button></div>
+    <p id="install-message">请在浏览器提示中允许打开 XTools，然后在客户端确认安装 <strong id="install-name"></strong>。</p>
+    <p class="install-help">未弹出提示？请确认已安装支持网页唤起的 XTools 客户端。</p>
+    <div class="dialog-actions">
+      <a class="button" href="https://github.com/jupiterben/xtools/releases" target="_blank" rel="noopener noreferrer">获取客户端${arrow}</a>
+      <a id="retry-install" class="install">${install}再次打开</a>
+    </div>
   </dialog>
 </body></html>`;
 }

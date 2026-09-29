@@ -26,7 +26,7 @@ npm run preview
 
 | 路径 | 用途 |
 | --- | --- |
-| `index.html` | Grid Card 首页：搜索、分类、工具详情、包下载、复制市场源 |
+| `index.html` | Grid Card 首页：搜索、分类、工具详情、唤起客户端安装、复制市场源 |
 | `market.css` / `market.js` / `favicon.png` | 自托管首页资源，不依赖外部 CDN |
 | `catalog.json` | Ed25519 签名目录，包含元数据和已发布版本 |
 | `packages/<sha256>.xtool` | HTML 工具包的原始字节，以数据扩展名下载 |
@@ -34,7 +34,11 @@ npm run preview
 
 `registry/catalog.json` 的 `payload` 是待验签的原始 UTF-8 JSON 字符串，`signature` 是 Ed25519 签名（hex）。公钥见 `registry/trust.json`，客户端必须事先固定公钥，不能从同一个不可信请求临时采信公钥。目录包含工具信息、API 版本、包长度和 SHA-256。
 
-发布器先验证签名和所有包，再按白名单导出首页及其资源、目录、包和健康文件。首页由已验证的最新版本信息在构建时生成，禁用 JavaScript 时仍能查看和下载工具；搜索、分类、详情弹窗和复制在浏览器本地完成。下载只保存 `.xtool` 文件，不代表已安装到客户端。客户端内的市场安装仍走原有签名校验流程。
+发布器先验证签名和所有包，再按白名单导出首页及其资源、目录、包和健康文件。首页由已验证的最新版本信息在构建时生成，禁用 JavaScript 时仍能查看工具并使用安装链接；搜索、分类、详情弹窗和复制在浏览器本地完成。
+
+网页的“安装”使用自定义 URL 协议，例如 `xtools://install?id=json`，由浏览器请求打开 XTools 客户端，不直接下载 `.xtool`。网页显示打开客户端的提示、重试入口和客户端 Releases 链接，不尝试判断客户端是否已安装，也不把唤起当作安装成功。需要安装支持此协议的新版客户端；旧安装包需升级。
+
+客户端兼容冷启动和已运行实例，只接受工具 ID，从客户端配置的受信任市场读取并验证目录后展示工具详情，由用户确认安装当前最新版本。协议不允许指定任意下载 URL、市场源或跳过签名验证；下载和 SHA-256 校验仍由客户端完成。
 
 `.xtool` 只是分发扩展名，字节与签名摘要不变；不会在 Pages 域名下作为 HTML 页面执行。发布产物不包含 `.keys`、工具源码、node_modules 或 Git 数据。GitHub Pages 的站点子路径必须保留，拼接时用 `catalog.json` 而不是 `/catalog.json`。
 
@@ -59,7 +63,7 @@ npm run registry:verify
 
 - `CI`：PR / main 上运行类型检查、签名与完整性测试、源代码与已签名包一致性检查、静态构建及本地 HTTP 下载验证。
 - `Deploy Market Pages`：main 验证通过后上传 `_site`，通过官方 Pages Actions 原子部署，再检查根首页 HTTP 200、页面资源、目录版本、CORS 和全部包摘要。
-- 浏览器测试覆盖搜索分类、详情弹窗、下载摘要、剪贴板失败反馈、无 JavaScript 访问、深浅主题和桌面/手机布局。
+- 浏览器测试覆盖搜索分类、详情弹窗、安装协议链接与重试提示、不触发包下载、剪贴板失败反馈、无 JavaScript 访问、深浅主题和桌面/手机布局。
 - 只有 deploy job 获得 `pages:write` 和 `id-token:write`，PR 没有发布权限。不需要 PAT、SSH 密码或 CI 签名私钥。
 - Pages Source 必须为 **GitHub Actions**（仓库 Settings → Pages）。当前仓库已启用工作流部署。
 - 手动运行工作流也只允许 main 发布，避免旧分支覆盖市场。
