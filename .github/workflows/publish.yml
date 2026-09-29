@@ -52,7 +52,7 @@ jobs:
             type=semver,pattern={{version}}
             type=sha,format=long
       - name: Build candidate
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           load: true
@@ -70,7 +70,7 @@ jobs:
           exit 1
       - name: Publish
         id: image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
