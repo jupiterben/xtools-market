@@ -1,9 +1,7 @@
 import { createPrivateKey, createPublicKey, sign } from 'node:crypto';
 import { readFile, mkdir, writeFile, access } from 'node:fs/promises';
-import { build } from 'vite';
-import { viteSingleFile } from 'vite-plugin-singlefile';
-import { resolve } from 'node:path';
 import { catalogSchema, digest, manifestSchema, verifyCatalog } from '../src/registry.js';
+import { buildTool } from './build-tool.js';
 
 const manifests = manifestSchema.array().parse(JSON.parse(await readFile('tools/catalog.json', 'utf8')));
 const key = createPrivateKey(await readFile(process.env.SIGNING_KEY_FILE ?? '.keys/market.pem'));
@@ -19,14 +17,7 @@ try {
 const releases = [...previous];
 await mkdir('registry/packages', { recursive: true });
 for (const manifest of manifests) {
-  await build({
-    configFile: false,
-    root: resolve('tools'),
-    define: { __TOOL_ID__: JSON.stringify(manifest.id) },
-    plugins: [viteSingleFile()],
-    build: { outDir: resolve('.build', manifest.id), emptyOutDir: true, target: 'es2022', cssCodeSplit: false },
-  });
-  const bytes = await readFile(`.build/${manifest.id}/index.html`);
+  const bytes = await buildTool(manifest.id);
   const sha256 = digest(bytes);
   const existing = previous.find((release) => release.manifest.id === manifest.id && release.manifest.version === manifest.version);
   if (existing) {

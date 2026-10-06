@@ -11,7 +11,9 @@ import { escapeHtml, renderHomepage } from '../src/homepage.js';
 test('registry signature and all package bytes verify', async () => {
   const registry = await loadRegistry('registry');
   assert.equal(registry.latest.size, 8);
-  assert.equal(registry.packages.size, 8);
+  assert.equal(registry.packages.size, new Set(registry.catalog.releases.map((release) => release.sha256)).size);
+  assert.equal(registry.latest.get('regex')?.manifest.version, '1.2.0');
+  assert.ok(registry.catalog.releases.some((release) => release.manifest.id === 'regex' && release.manifest.version === '1.0.0'));
 });
 
 test('rejects altered payloads, signatures and duplicate release identities', async () => {
@@ -23,7 +25,7 @@ test('rejects altered payloads, signatures and duplicate release identities', as
     return { payload, signature: sign(null, Buffer.from(payload), privateKey).toString('hex') };
   };
   const envelope = signed(catalog);
-  assert.equal(verifyCatalog(envelope, key).catalog.releases.length, 8);
+  assert.equal(verifyCatalog(envelope, key).catalog.releases.length, catalog.releases.length);
   assert.throws(() => verifyCatalog({ ...envelope, payload: `${envelope.payload} ` }, key), /signature/);
   assert.throws(() => verifyCatalog({ ...envelope, signature: '0'.repeat(128) }, key), /signature/);
   assert.throws(() => verifyCatalog(signed({ ...catalog, releases: [catalog.releases[0], catalog.releases[0]] }), key), /Duplicate/);

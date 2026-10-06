@@ -12,6 +12,7 @@
     "build": "tsx scripts/build-site.ts",
     "check": "tsc --noEmit && tsc -p tools/tsconfig.json",
     "tools:check": "tsx scripts/check-tools.ts",
+    "tools:preview": "tsx scripts/preview-tool.ts",
     "test": "tsx --test tests/*.test.ts",
     "test:web": "playwright test",
     "keys:init": "tsx scripts/init-keys.ts",

@@ -2,7 +2,7 @@ import { diffLines } from 'diff';
 import { v4 as uuid } from 'uuid';
 import { sha256, sha384, sha512 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
-import type { ToolId } from './protocol';
+import type { ToolId } from './protocol.js';
 
 export interface ToolInput {
   id: ToolId;
@@ -30,8 +30,9 @@ export async function transform({ id, input, secondary, mode, option }: ToolInpu
     case 'timestamp': {
       const text = input.trim();
       if (!text) throw new Error('请输入时间戳或日期');
+      const unit = option === 'auto' && /^-?\d{13,}(?:\.\d+)?$/.test(text) ? 'milliseconds' : option;
       const milliseconds = /^-?\d+(\.\d+)?$/.test(text)
-        ? Number(text) * (option === 'milliseconds' ? 1 : 1000)
+        ? Number(text) * (unit === 'milliseconds' ? 1 : 1000)
         : Date.parse(text);
       const date = new Date(milliseconds);
       if (Number.isNaN(date.getTime())) throw new Error('无法识别日期或时间戳');
